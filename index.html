@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raid — Web, Roblox &amp; Discord Development</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#080c14;
+    --surface:rgba(18,26,41,0.72);
+    --surface-solid:#121a29;
+    --line:rgba(238,242,247,0.1);
+    --gold:#ffb648;
+    --gold-dim:#8a6a35;
+    --cyan:#5ce1e6;
+    --text:#eef2f7;
+    --muted:#93a1b8;
+    --radius:16px;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  button{
+    font: inherit;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+  }
+
+  ::selection{ background:var(--gold); color:var(--bg); }
+  a{ color:inherit; text-decoration:none; }
+  :focus-visible{ outline:2px solid var(--cyan); outline-offset:3px; border-radius:4px; }
+
+  h1,h2,h3{ font-family:'Sora', sans-serif; line-height:1.08; }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.06em;
+    color:var(--gold);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .eyebrow::before{
+    content:'';
+    width:7px; height:7px; border-radius:50%;
+    background:var(--gold);
+    box-shadow:0 0 10px var(--gold);
+  }
+  .eyebrow.quiet::before{ box-shadow:none; opacity:0.6; }
+
+  #bg-canvas{
+    position:fixed;
+    inset:0;
+    z-index:-1;
+    width:100%;
+    height:100%;
+  }
+
+  .container{ max-width:1040px; margin:0 auto; padding:0 28px; }
+
+  /* ---------- NAV ---------- */
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    background:linear-gradient(to bottom, rgba(8,12,20,0.85), transparent);
+  }
+  nav{
+    max-width:1040px; margin:0 auto; padding:22px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .logo{
+    font-family:'Sora', sans-serif; font-weight:800; font-size:18px;
+    display:flex; align-items:center; gap:9px; letter-spacing:0.02em;
+  }
+  .logo-mark{
+    width:11px; height:11px; border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, #fff, var(--gold) 60%);
+    box-shadow:0 0 14px var(--gold);
+  }
+  .logo-img{ width:42px; height:42px; border-radius:8px; object-fit:contain; }
+  .nav-links{ display:flex; gap:32px; font-size:14px; font-weight:500; }
+  .nav-links a{ color:var(--muted); transition:color 0.2s ease; }
+  .nav-links a:hover{ color:var(--text); }
+  .nav-cta{
+    padding:10px 18px; border:1px solid var(--gold); color:var(--gold);
+    border-radius:999px; font-size:13px; font-weight:600;
+    transition:background 0.2s ease, color 0.2s ease;
+  }
+  .nav-cta:hover{ background:var(--gold); color:var(--bg); }
+  @media (max-width:720px){ .nav-links{ display:none; } }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    min-height:100vh;
+    display:flex; flex-direction:column; justify-content:center;
+    position:relative;
+  }
+  .hero-inner{ max-width:1040px; display:grid; grid-template-columns:1fr 1fr; gap:44px; align-items:center; }
+  .hero h1{
+    margin-top:20px;
+    font-size:clamp(38px, 6vw, 64px);
+    font-weight:800;
+  }
+  .hero-left .hero-actions{ margin-top:34px; }
+
+  /* Right column statement */
+  .hero-right .panel{
+    background:var(--surface);
+    backdrop-filter:blur(12px);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:28px 30px;
+  }
+  .hero-right .panel .pfp{ display:block; width:86px; height:86px; border-radius:12px; object-fit:cover; margin-bottom:12px; border:1px solid rgba(255,255,255,0.04); }
+  /* Lightbox for recent work images */
+  .lightbox{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); z-index:2000; opacity:0; pointer-events:none; transition:opacity 0.18s ease; }
+  .lightbox.visible{ opacity:1; pointer-events:auto; }
+  .lightbox-inner{ max-width:88vw; max-height:86vh; border-radius:12px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); background:var(--surface-solid); display:flex; align-items:center; justify-content:center; }
+  .lightbox-inner img{ width:100%; height:100%; object-fit:contain; display:block; }
+  .lightbox-close{ position:absolute; top:20px; right:22px; background:rgba(0,0,0,0.5); color:var(--text); border-radius:10px; padding:6px 10px; font-size:18px; border:1px solid rgba(255,255,255,0.04); cursor:pointer; }
+  .hero-right .panel .title{
+    font-family:'Sora', sans-serif; font-weight:800;
+    font-size:clamp(28px, 5.6vw, 40px);
+    color:var(--gold);
+    line-height:1.04;
+    margin-bottom:8px;
+  }
+  .hero-right .panel .desc{
+    font-size:clamp(16px, 2.8vw, 20px);
+    color:var(--text);
+    line-height:1.4;
+    margin-top:6px;
+  }
+  .hero h1 .glow{ color:var(--gold); }
+  .hero p{
+    margin-top:22px; font-size:17px; line-height:1.65; color:var(--muted);
+    max-width:480px;
+  }
+  .hero-actions{ margin-top:34px; display:flex; gap:14px; flex-wrap:wrap; }
+  .btn{
+    padding:14px 24px; border-radius:999px; font-weight:600; font-size:14.5px;
+    display:inline-flex; align-items:center; gap:8px;
+    transition:transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  .btn-primary{ background:var(--gold); color:var(--bg); }
+  .btn-primary:hover{ transform:translateY(-2px); box-shadow:0 10px 26px rgba(255,182,72,0.3); }
+  .btn-ghost{ border:1px solid var(--line); color:var(--text); }
+  .btn-ghost:hover{ background:rgba(238,242,247,0.06); }
+  .service-work-link{ margin-top:18px; }
+
+  .scroll-hint{
+    position:absolute; bottom:40px; left:0;
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--muted);
+    display:flex; align-items:center; gap:10px;
+  }
+  @media (max-width:920px){
+    .hero-inner{ grid-template-columns:1fr; max-width:640px; }
+    .hero-right .panel{ margin-top:18px; }
+  }
+  .scroll-hint .line{ width:34px; height:1px; background:var(--muted); }
+
+  /* ---------- SECTION SHARED ---------- */
+  section{ position:relative; padding:72px 0; }
+  .section-head{ margin-bottom:32px; max-width:560px; }
+  .section-head h2{
+    margin-top:12px; font-size:clamp(28px, 3.6vw, 38px); font-weight:700;
+  }
+  .section-head p{ margin-top:14px; color:var(--muted); font-size:15.5px; line-height:1.6; }
+
+  .reveal{ opacity:0; transform:translateY(24px); transition:opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.is-visible{ opacity:1; transform:translateY(0); }
+
+  /* ---------- SERVICES ---------- */
+  .service-list{ display:flex; flex-direction:column; gap:16px; }
+  .service-item{
+    background:var(--surface);
+    backdrop-filter:blur(14px);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:30px 32px;
+    display:grid;
+    grid-template-columns:56px 1fr;
+    gap:24px;
+    align-items:flex-start;
+    transition:border-color 0.3s ease, transform 0.3s ease;
+  }
+  .service-item.is-active{
+    border-color:rgba(255,182,72,0.5);
+    transform:translateX(4px);
+  }
+  .service-icon{
+    width:52px; height:52px; border-radius:12px;
+    background:rgba(255,182,72,0.1);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--gold);
+    transition:background 0.3s ease;
+  }
+  .service-icon svg{ width:24px; height:24px; }
+  .service-item.is-active .service-icon{ background:rgba(255,182,72,0.22); }
+  .service-item h3{ font-size:19px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+  .service-item p{ color:var(--muted); font-size:14.5px; line-height:1.6; max-width:520px; }
+
+  .badge{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px; font-weight:500; letter-spacing:0.02em;
+    padding:4px 10px; border-radius:999px;
+    background:rgba(92,225,230,0.12); color:var(--cyan);
+  }
+
+  .example-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:0.05em; color:var(--muted);
+    margin-top:22px; margin-bottom:10px; display:block;
+  }
+  .example-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(148px, 1fr));
+    gap:12px;
+  }
+  .example-card{
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+    background:rgba(8,12,20,0.4);
+  }
+  .example-thumb{
+    height:88px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px;
+  }
+  .example-thumb.t1{ background:linear-gradient(135deg, #2a3a6b, #121a29); }
+  .example-thumb.t2{ background:linear-gradient(135deg, #2a5a5c, #121a29); }
+  .example-thumb.t3{ background:linear-gradient(135deg, #5c3a2a, #121a29); }
+  .example-thumb.t4{ background:linear-gradient(135deg, #4a2a5c, #121a29); }
+  .example-thumb.t5{ background:linear-gradient(135deg, #2a5c3f, #121a29); }
+  .example-thumb.t6{ background:linear-gradient(135deg, #5c2a4a, #121a29); }
+  .example-thumb.t7{ background:linear-gradient(135deg, #3a5c2a, #121a29); }
+  .example-thumb.t8{ background:linear-gradient(135deg, #2a4a5c, #121a29); }
+  .example-body{ padding:11px 13px 13px; }
+  .example-body h4{ font-family:'Sora', sans-serif; font-size:13px; font-weight:700; margin-bottom:3px; line-height:1.3; }
+  .example-body span{ font-size:11.5px; color:var(--muted); }
+
+  .game-grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:14px;
+  }
+  @media (max-width:560px){ .game-grid{ grid-template-columns:1fr; } }
+  .game-card{
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+    background:rgba(8,12,20,0.4);
+  }
+  .game-thumb{
+    height:110px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:36px;
+  }
+  .game-thumb.g1{ background:linear-gradient(135deg, #2a3a6b, #1a2236); }
+  .game-thumb.g2{ background:linear-gradient(135deg, #5c3a2a, #1a2236); }
+  .game-body{ padding:14px 16px 16px; }
+  .game-body h4{ font-family:'Sora', sans-serif; font-size:15px; font-weight:700; margin-bottom:5px; }
+  .game-body p{ font-size:13px; color:var(--muted); line-height:1.5; }
+
+  /* ---------- BUSINESSES ---------- */
+  .business-card{
+    background:var(--surface);
+    backdrop-filter:blur(14px);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:38px;
+  }
+  .business-top{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:16px; margin-bottom:18px;
+  }
+  .business-name{ display:flex; align-items:center; gap:12px; }
+  .business-name .dot{
+    width:12px; height:12px; border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, #fff, var(--gold) 60%);
+    box-shadow:0 0 10px var(--gold);
+  }
+  .business-name span{ font-family:'Sora', sans-serif; font-weight:700; font-size:20px; }
+  .business-link{
+    font-size:13.5px; font-weight:600; color:var(--cyan);
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .business-card p.desc{ color:var(--muted); font-size:15px; line-height:1.65; max-width:560px; margin-bottom:26px; }
+
+  .built-with{
+    border-top:1px solid var(--line);
+    padding-top:22px;
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:14px;
+  }
+  .built-with .label{
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--muted);
+    letter-spacing:0.04em; margin-bottom:6px; display:block;
+  }
+  .built-with h4{ font-family:'Sora', sans-serif; font-size:16.5px; font-weight:700; }
+  .built-with .tag{
+    font-size:11px; font-weight:600; padding:4px 10px; border-radius:999px;
+    background:rgba(92,225,230,0.12); color:var(--cyan); margin-left:10px;
+    vertical-align:middle;
+  }
+
+  /* ---------- PRICING, PROCESS, ABOUT & TESTIMONIALS ---------- */
+  .pricing-grid,.testimonial-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; }
+  .price-card,.testimonial-card,.process-step,.about-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:16px;
+  }
+  .price-card{ padding:22px 20px; }
+  .price-card h3{ font-size:16px; margin-bottom:14px; }
+  .price{ color:var(--gold); font-family:'Sora', sans-serif; font-size:25px; font-weight:800; }
+  .price-card p{ margin-top:10px; color:var(--muted); font-size:13px; line-height:1.5; }
+  .process-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; }
+  .process-step{ padding:22px 20px; }
+  .process-number{ color:var(--gold); font-family:'JetBrains Mono', monospace; font-size:12px; }
+  .process-step h3{ margin-top:18px; font-size:17px; }
+  .process-step p{ margin-top:9px; color:var(--muted); font-size:13.5px; line-height:1.55; }
+  .about-card{ display:grid; grid-template-columns:1fr 1fr; gap:34px; padding:38px; }
+  .about-card h2{ font-size:clamp(26px, 3.6vw, 36px); }
+  .about-card p{ color:var(--muted); font-size:15px; line-height:1.7; }
+  .about-card p + p{ margin-top:14px; }
+  .testimonial-grid{ grid-template-columns:repeat(2, 1fr); }
+  .testimonial-card{ padding:22px; }
+  .stars{ color:var(--gold); letter-spacing:3px; font-size:17px; }
+  .testimonial-card blockquote{ margin-top:14px; color:var(--text); font-size:14px; line-height:1.6; }
+  .testimonial-card cite{ display:block; margin-top:16px; color:var(--muted); font-size:12px; font-style:normal; }
+  @media (max-width:760px){
+    .pricing-grid,.process-grid{ grid-template-columns:repeat(2, 1fr); }
+    .about-card{ grid-template-columns:1fr; padding:28px; gap:18px; }
+  }
+  @media (max-width:500px){
+    .pricing-grid,.process-grid,.testimonial-grid{ grid-template-columns:1fr; }
+  }
+
+  /* ---------- CONTACT ---------- */
+  .contact-panel{
+    background:var(--surface);
+    backdrop-filter:blur(14px);
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:42px 36px;
+    text-align:center;
+  }
+  .contact-panel h2{ font-size:clamp(26px, 4vw, 36px); margin-bottom:14px; }
+  .contact-panel p{ color:var(--muted); max-width:420px; margin:0 auto 30px; font-size:15px; }
+  .contact-actions{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .btn svg{ width:16px; height:16px; flex-shrink:0; }
+
+  .copy-link{
+    margin-top:22px;
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px; color:var(--muted);
+    border:1px dashed var(--line);
+    padding:9px 16px; border-radius:999px;
+    background:transparent;
+    transition:color 0.2s ease, border-color 0.2s ease;
+  }
+  .copy-link:hover{ color:var(--cyan); border-color:var(--cyan); }
+  .copy-link svg{ width:14px; height:14px; flex-shrink:0; }
+
+  footer{
+    width:100%;
+    max-width:none;
+    padding:28px max(28px, calc((100% - 984px) / 2)) 34px;
+    border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:14px; color:var(--muted); font-size:13px;
+  }
+  @media (max-width:720px){
+    section{ padding:56px 0; }
+    .section-head{ margin-bottom:26px; }
+    .contact-panel{ padding:34px 24px; }
+    footer{ padding:24px 28px 30px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<header>
+  <nav>
+    <div class="logo"><img src="assets/images.png" alt="Lumina logo" class="logo-img"><span class="logo-mark"></span>Ra'id</div>
+    <div class="nav-links">
+      <a href="#services">Services</a>
+      <a href="#process">Process</a>
+      <a href="#about">About</a>
+      <a href="#testimonials">Reviews</a>
+      <a href="#businesses">Businesses</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <a href="#contact" class="nav-cta">Get in touch</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-left">
+      <div class="eyebrow">WEB · ROBLOX · DISCORD</div>
+      <h1>Hey, I'm Ra'id.<br>I make websites and digital projects that <span class="glow">work.</span></h1>
+      <p>Need a website, webshop, Roblox system or Discord bot? Tell me what you have in mind. I'll build it clearly, keep you updated and explain everything when it's ready.</p>
+      <div class="hero-actions">
+        <a href="#services" class="btn btn-primary">See what I build</a>
+        <a href="recent-works.html" class="btn btn-ghost">View Recent Works</a>
+        <a href="#contact" class="btn btn-ghost">Get in touch</a>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="panel">
+        <img src="assets/images.png" alt="Profile" class="pfp">
+        <div class="title">I am Ra'id</div>
+        <div class="desc">I help people turn an idea into something they can actually use. No confusing talk, no unnecessary extras, just a solid project that does what it should.</div>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="scroll-hint"><span class="line"></span>scroll</div>
+  </div>
+</section>
+
+<section id="services">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow quiet">WHAT I DO</div>
+      <h2>Three things, done properly.</h2>
+    </div>
+    <div class="service-list">
+      <div class="service-item reveal" data-shard="0">
+        <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9s1.3-6.4 3.8-9z"/></svg></div>
+        <div>
+          <h3>Websites &amp; Webshops</h3>
+          <p>I build clean websites and webshops for people who want to look professional online without making things complicated. You get a site that is easy to use and easy to manage yourself.</p>
+        </div>
+      </div>
+      <div class="service-item reveal" data-shard="1">
+        <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="20" height="10" rx="5"/><circle cx="8" cy="13" r="1.4" fill="currentColor" stroke="none"/><circle cx="16" cy="13" r="1.4" fill="currentColor" stroke="none"/><path d="M6 11v4M4 13h4"/></svg></div>
+        <div>
+          <h3>Roblox Games &amp; Systems <span class="badge">Previously @ Eselar Studios</span></h3>
+          <p>I have worked on complete Roblox games at Eselar Studios, from the main gameplay to the small details that make a game fun and reliable.</p>
+          <a href="recent-works.html" class="btn btn-ghost service-work-link">View Recent Works</a>
+
+          <span class="example-label">SYSTEMS I CAN BUILD</span>
+          <div class="example-grid">
+            <div class="example-card">
+              <div class="example-thumb t1">🎒</div>
+              <div class="example-body"><h4>Inventory &amp; Trading</h4><span>Item data, trading, drop rates</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t2">🗺️</div>
+              <div class="example-body"><h4>Quest &amp; Progression</h4><span>XP, levels, unlockables</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t3">💰</div>
+              <div class="example-body"><h4>Currency &amp; Shop</h4><span>In-game currency, purchases</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t4">🎯</div>
+              <div class="example-body"><h4>Matchmaking &amp; Lobby</h4><span>Queues, team balancing</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t5">🛡️</div>
+              <div class="example-body"><h4>Anti-Cheat Detection</h4><span>Server-side validation</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t6">🏆</div>
+              <div class="example-body"><h4>Leaderboards &amp; Stats</h4><span>Global &amp; friend rankings</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t7">🗨️</div>
+              <div class="example-body"><h4>NPC Dialogue &amp; Quests</h4><span>Branching dialogue trees</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t8">💾</div>
+              <div class="example-body"><h4>DataStore &amp; Saving</h4><span>Reliable player data saves</span></div>
+            </div>
+          </div>
+
+          <span class="example-label">GAMES I CAN BUILD</span>
+          <div class="game-grid">
+            <div class="game-card">
+              <div class="game-thumb g1">🧗</div>
+              <div class="game-body"><h4>Obstacle &amp; Adventure Game</h4><p>Checkpoint-based obby with cosmetic rewards and a progression path.</p></div>
+            </div>
+            <div class="game-card">
+              <div class="game-thumb g2">🏭</div>
+              <div class="game-body"><h4>Tycoon &amp; Simulator Game</h4><p>Build-and-earn tycoon with upgrades, prestige, and passive income loops.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="service-item reveal" data-shard="2">
+        <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10H8l-4 4V5z"/><path d="M8 9h8M8 12h5"/></svg></div>
+        <div>
+          <h3>Discord Servers &amp; Bots</h3>
+          <p>I set up Discord servers that are easy to run and build bots that take repetitive work off your hands, like tickets, moderation and payments.</p>
+          <a href="recent-works.html" class="btn btn-ghost service-work-link">View Recent Works</a>
+
+          <span class="example-label">BOTS I CAN BUILD</span>
+          <div class="example-grid">
+            <div class="example-card">
+              <div class="example-thumb t1">🎫</div>
+              <div class="example-body"><h4>Ticket Support Bot</h4><span>Categorised tickets, transcripts</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t2">🧾</div>
+              <div class="example-body"><h4>SellAuth Bot</h4><span>Orders, licenses, invoices &amp; delivery</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t3">💱</div>
+              <div class="example-body"><h4>Crypto Exchange Bot</h4><span>Wallet balance &amp; fee calculator</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t4">🛡️</div>
+              <div class="example-body"><h4>Moderation &amp; Auto-Mod</h4><span>Spam/raid protection, logging</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t5">👋</div>
+              <div class="example-body"><h4>Welcome &amp; Onboarding Bot</h4><span>Auto-roles, intro flow, DMs</span></div>
+            </div>
+            <div class="example-card">
+              <div class="example-thumb t6">🎉</div>
+              <div class="example-body"><h4>Giveaway &amp; Events Bot</h4><span>Scheduled draws, auto winner pick</span></div>
+            </div>
+            
+          </div>
+          <p style="margin-top:14px; font-size:13.5px; color:var(--muted);">These are just examples — every bot is custom, so if you need something else, just ask.</p>
+        </div>
+      </div>
+      <div class="service-item reveal">
+        <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="14" height="12" rx="2"/><path d="M16.5 10l5-3v10l-5-3"/></svg></div>
+        <div>
+          <h3>Video Editing</h3>
+          <p>I edit short and long videos so they are clear, well-paced and ready to post.</p>
+          <p style="margin-top:14px; font-size:13.5px; color:var(--muted);">No recent work yet — coming soon.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow quiet">STARTING PRICES</div>
+      <h2>Simple prices to get started.</h2>
+      <p>Every project is different, but these prices give you a clear starting point. I'll always discuss the final price with you first.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card reveal"><h3>Website</h3><div class="price">From €50</div><p>A clean website that makes your business easy to find and understand.</p></div>
+      <div class="price-card reveal"><h3>Discord bot</h3><div class="price">From €10</div><p>A useful bot for tickets, moderation, automation or your own idea.</p></div>
+      <div class="price-card reveal"><h3>Roblox systems</h3><div class="price">From €5</div><p>Small or large game systems built to work smoothly in your experience.</p></div>
+      <div class="price-card reveal"><h3>Short-form video</h3><div class="price">From €5</div><p>Fast, clear edits for TikTok, Instagram Reels or YouTube Shorts.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="process">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow quiet">HOW IT WORKS</div>
+      <h2>From idea to finished project.</h2>
+    </div>
+    <div class="process-grid">
+      <div class="process-step reveal"><span class="process-number">01</span><h3>Tell me your idea</h3><p>Send me what you need, even if it is still rough or incomplete.</p></div>
+      <div class="process-step reveal"><span class="process-number">02</span><h3>We make a plan</h3><p>We agree on the features, price and timing before I start building.</p></div>
+      <div class="process-step reveal"><span class="process-number">03</span><h3>I build it</h3><p>I work on the project and keep you updated while it comes together.</p></div>
+      <div class="process-step reveal"><span class="process-number">04</span><h3>You get the result</h3><p>We test everything, make the final changes and I explain how it works.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <div class="container">
+    <div class="about-card reveal">
+      <div>
+        <div class="eyebrow quiet">ABOUT ME</div>
+        <h2 style="margin-top:14px;">Hi, I'm Ra'id.</h2>
+      </div>
+      <div>
+        <p>I like building things that are useful, look good and do not need a long explanation. I work on websites, Roblox projects, Discord bots and video edits.</p>
+        <p>You'll deal directly with me from the first message to the finished project. I keep things simple, answer questions honestly and make sure you know what is happening.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="testimonials">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow quiet">CLIENT FEEDBACK</div>
+      <h2>What people say.</h2>
+      <p>Example reviews for now. These can be replaced with real client feedback as projects are completed.</p>
+    </div>
+    <div class="testimonial-grid">
+      <div class="testimonial-card reveal"><div class="stars" aria-label="5 out of 5 stars">★★★★★</div><blockquote>“Really easy to work with and everything was explained clearly. The website came out better than I expected.”</blockquote><cite>Website client</cite></div>
+      <div class="testimonial-card reveal"><div class="stars" aria-label="4 out of 5 stars">★★★★☆</div><blockquote>“Ra'id understood what I wanted quickly and made the Discord setup much easier for our community.”</blockquote><cite>Discord client</cite></div>
+      <div class="testimonial-card reveal"><div class="stars" aria-label="5 out of 5 stars">★★★★★</div><blockquote>“The Roblox system worked smoothly and the communication throughout the project was great.”</blockquote><cite>Roblox client</cite></div>
+      <div class="testimonial-card reveal"><div class="stars" aria-label="4 out of 5 stars">★★★★☆</div><blockquote>“Fast, friendly and clear. I got exactly what I needed and knew what was happening throughout the project.”</blockquote><cite>Roblox client</cite></div>
+    </div>
+  </div>
+</section>
+
+<section id="businesses">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow quiet">MY BUSINESS</div>
+      <h2>Lumina Creations</h2>
+    </div>
+    <div class="business-card reveal">
+      <div class="business-top">
+        <div class="business-name"><span class="dot"></span><span>Lumina Creations</span><span class="tag">CEO</span></div>
+        <a href="https://luminacreations.nl" target="_blank" rel="noopener" class="business-link">
+          luminacreations.nl
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+        </a>
+      </div>
+      <p class="desc">I'm the CEO of Lumina Creations, my web agency. I make affordable websites for local businesses that want a professional online presence without the agency price tag or the jargon.</p>
+      <div class="built-with">
+        <div>
+          <span class="label">BUILT WITH LUMINA</span>
+          <h4>Verelst Schilderwerken <span class="tag">Live client site</span></h4>
+        </div>
+        <a href="https://verelstschilderwerken.nl" target="_blank" rel="noopener" class="business-link">
+          verelstschilderwerken.nl
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="container">
+    <div class="contact-panel reveal">
+      <div class="eyebrow quiet" style="justify-content:center;">LET'S TALK</div>
+      <h2>Got something to build?</h2>
+      <p>Have an idea or a project that needs fixing? Send me a message with what you need. I usually reply within a day.</p>
+      <div class="contact-actions">
+        <a href="mailto:info@luminacreations.nl" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+          Email me
+        </a>
+        <a href="https://wa.me/31684979964" target="_blank" rel="noopener" class="btn btn-ghost">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.5L4 20l1.1-4.4A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 10.3c.3 2.1 2.3 4.1 4.4 4.4"/></svg>
+          WhatsApp
+        </a>
+        <a href="https://nl.linkedin.com/in/raid-chougna-a20a82357" target="_blank" rel="noopener" class="btn btn-ghost">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 10.5V16M8 7.5v.01" stroke-linecap="round"/><path d="M12 16v-3.8c0-1.3.9-2.3 2.2-2.3s2.3 1 2.3 2.3V16"/></svg>
+          LinkedIn
+        </a>
+      </div>
+      <button type="button" id="copyEmailBtn" class="copy-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/></svg>
+        <span id="copyEmailLabel">info@luminacreations.nl</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<footer class="container">
+  <div>© 2026 Raid — CEO of Lumina Creations.</div>
+  <div>info@luminacreations.nl</div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  /* ---------------- SCROLL-DRIVEN LIGHT CORE ---------------- */
+  const canvas = document.getElementById('bg-canvas');
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0, 8);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  scene.add(new THREE.AmbientLight(0x3a4a6b, 0.7));
+  const goldLight = new THREE.PointLight(0xffb648, 3, 20);
+  goldLight.position.set(2, 2, 4);
+  scene.add(goldLight);
+  const cyanLight = new THREE.PointLight(0x5ce1e6, 1.6, 20);
+  cyanLight.position.set(-3, -2, 3);
+  scene.add(cyanLight);
+
+  // The core: a glowing icosahedron representing "Lumina"
+  const coreGeo = new THREE.IcosahedronGeometry(1.15, 1);
+  const coreMat = new THREE.MeshStandardMaterial({
+    color: 0x1a2236,
+    emissive: 0xffb648,
+    emissiveIntensity: 0.35,
+    flatShading: true,
+    roughness: 0.35,
+    metalness: 0.4
+  });
+  const core = new THREE.Mesh(coreGeo, coreMat);
+  scene.add(core);
+
+  const wireGeo = new THREE.IcosahedronGeometry(1.19, 1);
+  const wireMat = new THREE.MeshBasicMaterial({ color: 0xffb648, wireframe: true, transparent: true, opacity: 0.12 });
+  const wire = new THREE.Mesh(wireGeo, wireMat);
+  scene.add(wire);
+
+  // Three shards orbiting the core, one per service
+  const shardGeo = new THREE.OctahedronGeometry(0.26, 0);
+  const shardColors = [0xffb648, 0x5ce1e6, 0xffffff];
+  const shards = [];
+  for (let i = 0; i < 3; i++) {
+    const mat = new THREE.MeshStandardMaterial({
+      color: shardColors[i],
+      emissive: shardColors[i],
+      emissiveIntensity: 0.25,
+      flatShading: true,
+      roughness: 0.3,
+      metalness: 0.3
+    });
+    const mesh = new THREE.Mesh(shardGeo, mat);
+    const angle = (i / 3) * Math.PI * 2;
+    shards.push({ mesh, angle, baseAngle: angle, radius: 2.6, active: false });
+    scene.add(mesh);
+  }
+
+  // Faint starfield
+  const starGeo = new THREE.BufferGeometry();
+  const starCount = 300;
+  const starPos = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount; i++) {
+    starPos[i * 3] = (Math.random() - 0.5) * 30;
+    starPos[i * 3 + 1] = (Math.random() - 0.5) * 30;
+    starPos[i * 3 + 2] = (Math.random() - 0.5) * 30 - 6;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xeef2f7, size: 0.04, transparent: true, opacity: 0.5 }));
+  scene.add(stars);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Track which service (if any) is in view, to focus a shard
+  let activeShardIndex = -1;
+  const serviceItems = document.querySelectorAll('.service-item[data-shard]');
+  const shardObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const idx = Number(entry.target.dataset.shard);
+      if (entry.isIntersecting) {
+        activeShardIndex = idx;
+        serviceItems.forEach(el => el.classList.toggle('is-active', Number(el.dataset.shard) === idx));
+      }
+    });
+  }, { threshold: 0.55 });
+  serviceItems.forEach(el => shardObserver.observe(el));
+
+  // General scroll progress drives overall rotation speed + camera dolly
+  function getScrollProgress() {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    return h > 0 ? window.scrollY / h : 0;
+  }
+
+  const clock = new THREE.Clock();
+  function animate() {
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+    const progress = getScrollProgress();
+
+    core.rotation.y = t * 0.15 + progress * Math.PI * 1.4;
+    core.rotation.x = Math.sin(t * 0.2) * 0.15;
+    wire.rotation.copy(core.rotation);
+
+    shards.forEach((s, i) => {
+      const isActive = i === activeShardIndex;
+      s.active += ((isActive ? 1 : 0) - s.active) * 0.06;
+
+      const angle = s.baseAngle + t * 0.2 + progress * Math.PI * 0.6;
+      const radius = s.radius + s.active * 0.5;
+      s.mesh.position.x = Math.cos(angle) * radius;
+      s.mesh.position.z = Math.sin(angle) * radius - 1.5;
+      s.mesh.position.y = Math.sin(angle * 1.4) * 0.6;
+      s.mesh.rotation.x += 0.01 + s.active * 0.02;
+      s.mesh.rotation.y += 0.014;
+
+      const scale = 1 + s.active * 0.7;
+      s.mesh.scale.setScalar(scale);
+      s.mesh.material.emissiveIntensity = 0.25 + s.active * 0.9;
+    });
+
+    // camera drifts slowly further from the core as you scroll, then settles near contact
+    camera.position.z = 8 - progress * 2.2;
+    camera.position.y = -progress * 1.2;
+    camera.lookAt(0, -progress * 0.6, 0);
+
+    goldLight.intensity = 3 - activeShardIndex * 0.3;
+    stars.rotation.y = t * 0.008;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  /* ---------------- COPY EMAIL FALLBACK ---------------- */
+  const copyBtn = document.getElementById('copyEmailBtn');
+  const copyLabel = document.getElementById('copyEmailLabel');
+  if (copyBtn && copyLabel) {
+    const email = 'info@luminacreations.nl';
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(email);
+        copyLabel.textContent = 'Copied!';
+      } catch (err) {
+        // Fallback for browsers without clipboard API access
+        const temp = document.createElement('textarea');
+        temp.value = email;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        copyLabel.textContent = 'Copied!';
+      }
+      setTimeout(() => { copyLabel.textContent = email; }, 1800);
+    });
+  }
+
+  /* ---------------- SCROLL REVEAL ---------------- */
+  const revealEls = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  revealEls.forEach(el => io.observe(el));
+
+  /* ---------------- LIGHTBOX FOR RECENT WORK ---------------- */
+  (function(){
+    const lightbox = document.createElement('div');
+    lightbox.id = 'lightbox';
+    lightbox.className = 'lightbox';
+    lightbox.innerHTML = `
+      <div class="lightbox-inner"><img id="lightbox-img" src="" alt="Preview"></div>
+      <button id="lightbox-close" class="lightbox-close">×</button>
+    `;
+    document.body.appendChild(lightbox);
+
+    const imgEl = lightbox.querySelector('#lightbox-img');
+    const closeBtn = lightbox.querySelector('#lightbox-close');
+
+    function open(src){ imgEl.src = src; lightbox.classList.add('visible'); }
+    function close(){ imgEl.src = ''; lightbox.classList.remove('visible'); }
+
+    document.addEventListener('click', (e) => {
+      const card = e.target.closest('.example-card');
+      if (!card) return;
+      const datasetSrc = card.dataset.image;
+      const thumbImg = card.querySelector('.example-thumb img');
+      const src = thumbImg ? thumbImg.src : datasetSrc;
+      if (src) { e.preventDefault(); open(src); }
+    });
+
+    closeBtn.addEventListener('click', close);
+    lightbox.addEventListener('click', (e)=>{ if (e.target === lightbox) close(); });
+    document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') close(); });
+  })();
+</script>
+
+</body>
+</html>
